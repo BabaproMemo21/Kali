@@ -1,50 +1,42 @@
-name: Run Kali Linux RDP Container
+name: Run Kali Linux Container
 
 on:
   workflow_dispatch:
 
 jobs:
   deploy:
-    # Eğer /dev/kvm kullanacaksan self-hosted runner olmalı
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 360
 
     steps:
-      - name: Install Docker & Docker Compose & Curl
+      - name: Install Docker Compose & Curl
         run: |
-          sudo apt-get update
-          sudo apt-get install -y docker.io docker-compose curl
+          sudo apt update
+          sudo apt install docker-compose curl -y
 
-      - name: Create docker-compose file (kali.yml)
+      - name: Create kali.yml
         run: |
           mkdir -p Kali
           cd Kali
-          cat > kali.yml <<'EOF'
-version: "3.9"
+          cat <<EOF > kali.yml
 services:
   kali:
-    image: dockurr/linux
+    image: kalilinux/kali-rolling
     container_name: kali
     environment:
-      DISTRO: "kali"
-      ISO: "https://cdimage.kali.org/current/kali-linux-2024.3-installer-amd64.iso"
-      VERSION: "2024.3"
-      USERNAME: "MASTER"
-      PASSWORD: "admin@123"
-      RAM_SIZE: "8G"
-      CPU_CORES: "4"
-      DISK_SIZE: "100G"
+      USERNAME: "kali"
+      PASSWORD: "kali@123"
     devices:
       - /dev/kvm
       - /dev/net/tun
     cap_add:
       - NET_ADMIN
     ports:
-      - "8007:8006"       # Web arayüz
-      - "5901:5900"       # VNC
-      - "33891:3389/tcp"  # RDP TCP
-      - "33891:3389/udp"  # RDP UDP
+      - "2222:22"       # SSH
+      - "3389:3389/tcp" # RDP (kali içinde xrdp varsa)
+      - "3389:3389/udp"
     stop_grace_period: 2m
+EOF
 
       - name: Run Docker Compose
         run: |
@@ -58,24 +50,26 @@ services:
           curl -L "$URL" -o cloudflared
           chmod +x cloudflared
 
-      - name: Start Cloudflared Tunnel (Web UI on 8007)
+      - name: Start Cloudflared Tunnel
         run: |
-          ./cloudflared tunnel --url http://localhost:8007 --no-autoupdate > cf_log.txt 2>&1 &
+          ./cloudflared tunnel --url http://localhost:2222 --no-autoupdate > cf_log.txt 2>&1 &
           echo "Cloudflare linki oluşturuluyor..."
-          for i in $(seq 1 30); do
+          sleep 10
+          for i in {1..30}; do
+            LINK=$(grep -o "https://.*\.trycloudflare\.com" cf_log.txt | head -n1)
+            if [[ -n "$LINK" ]]; then break; fi
             sleep 2
-            LINK=$(grep -o "https://.*\.trycloudflare\.com" cf_log.txt | head -n1 || true)
-            [ -n "$LINK" ] && break
           done
+          echo "SSH/RDP bağlantı linkin: $LINK"
           echo "$LINK" > link.txt
 
-      - name: Upload Cloudflare Web UI Link
+      - name: Upload Cloudflare RDP Link
         uses: actions/upload-artifact@v4
         with:
-          name: cloudflare-webui-link
+          name: cloudflare-kali-link
           path: link.txt
 
-      - name: Keep alive 6 hours
+      - name: Sleep for 6 hours to keep container and tunnel alive
         run: |
-          echo "6 saatlik Kali oturumu başladı. YAML ile şaka olmaz 🙂"
+          echo "6 saatlik Kali Linux oturumu başladı. BabaproMemo Tarafindan Yapilmistir!"
           sleep 21600
