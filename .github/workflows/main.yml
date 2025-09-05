@@ -5,11 +5,12 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    # KVM gerekiyorsa: self-hosted runner kullan. GitHub hosted runner'larda /dev/kvm genelde yok.
+    runs-on: self-hosted
     timeout-minutes: 360
 
     steps:
-      - name: Install Docker Compose & Curl
+      - name: Install Docker & Docker Compose & Curl
         run: |
           sudo apt-get update
           sudo apt-get install -y docker.io docker-compose curl
@@ -39,10 +40,10 @@ services:
     cap_add:
       - NET_ADMIN
     ports:
-      - "8007:8006"   # Web arayüz
-      - "5901:5900"   # VNC
-      - "33891:3389/tcp"  # RDP (TCP)
-      - "33891:3389/udp"  # RDP (UDP)
+      - "8007:8006"       # Web arayüz
+      - "5901:5900"       # VNC
+      - "33891:3389/tcp"  # RDP TCP
+      - "33891:3389/udp"  # RDP UDP
     stop_grace_period: 2m
 EOF
 
@@ -67,7 +68,6 @@ EOF
             LINK=$(grep -o "https://.*\.trycloudflare\.com" cf_log.txt | head -n1 || true)
             [ -n "$LINK" ] && break
           done
-          echo "Web arayüz linkin: $LINK"
           echo "$LINK" > link.txt
 
       - name: Upload Cloudflare Web UI Link
