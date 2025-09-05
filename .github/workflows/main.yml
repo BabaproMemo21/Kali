@@ -5,7 +5,7 @@ on:
 
 jobs:
   deploy:
-    # KVM gerekiyorsa: self-hosted runner kullan. GitHub hosted runner'larda /dev/kvm genelde yok.
+    # Eğer /dev/kvm kullanacaksan self-hosted runner olmalı
     runs-on: self-hosted
     timeout-minutes: 360
 
@@ -46,6 +46,7 @@ services:
       - "33891:3389/udp"  # RDP UDP
     stop_grace_period: 2m
 EOF
+
       - name: Run Docker Compose
         run: |
           cd Kali
