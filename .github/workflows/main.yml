@@ -11,14 +11,15 @@ jobs:
     steps:
       - name: Install Docker Compose & Curl
         run: |
-          sudo apt update
-          sudo apt install docker-compose curl -y
+          sudo apt-get update
+          sudo apt-get install -y docker.io docker-compose curl
 
-      - name: Create kali.yml
+      - name: Create docker-compose file (kali.yml)
         run: |
           mkdir -p Kali
           cd Kali
-          cat <<EOF > kali.yml
+          cat > kali.yml <<'EOF'
+version: "3.9"
 services:
   kali:
     image: dockurr/linux
@@ -40,7 +41,8 @@ services:
     ports:
       - "8007:8006"   # Web arayüz
       - "5901:5900"   # VNC
-      - "33891:3389"  # RDP
+      - "33891:3389/tcp"  # RDP (TCP)
+      - "33891:3389/udp"  # RDP (UDP)
     stop_grace_period: 2m
 EOF
 
@@ -56,26 +58,25 @@ EOF
           curl -L "$URL" -o cloudflared
           chmod +x cloudflared
 
-      - name: Start Cloudflared Tunnel
+      - name: Start Cloudflared Tunnel (Web UI on 8007)
         run: |
-          ./cloudflared tunnel --url http://localhost:8006 --no-autoupdate > cf_log.txt 2>&1 &
+          ./cloudflared tunnel --url http://localhost:8007 --no-autoupdate > cf_log.txt 2>&1 &
           echo "Cloudflare linki oluşturuluyor..."
-          sleep 10
-          for i in {1..30}; do
-            LINK=$(grep -o "https://.*\.trycloudflare\.com" cf_log.txt | head -n1)
-            if [[ -n "$LINK" ]]; then break; fi
+          for i in $(seq 1 30); do
             sleep 2
+            LINK=$(grep -o "https://.*\.trycloudflare\.com" cf_log.txt | head -n1 || true)
+            [ -n "$LINK" ] && break
           done
-          echo "RDP bağlantı linkin: $LINK"
+          echo "Web arayüz linkin: $LINK"
           echo "$LINK" > link.txt
 
-      - name: Upload Cloudflare RDP Link
+      - name: Upload Cloudflare Web UI Link
         uses: actions/upload-artifact@v4
         with:
-          name: cloudflare-rdp-link
+          name: cloudflare-webui-link
           path: link.txt
 
-      - name: Sleep for 6 hours to keep container and tunnel alive
+      - name: Keep alive 6 hours
         run: |
-          echo "6 saatlik Kali oturumu başladı. Güle güle kullan! BabaproMemo imzalı 😎"
+          echo "6 saatlik Kali oturumu başladı. YAML ile şaka olmaz 🙂"
           sleep 21600
