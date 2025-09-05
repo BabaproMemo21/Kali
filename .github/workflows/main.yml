@@ -1,4 +1,4 @@
-name: Run Kali Linux Container
+name: Run Windows RDP Container
 
 on:
   workflow_dispatch:
@@ -14,34 +14,39 @@ jobs:
           sudo apt update
           sudo apt install docker-compose curl -y
 
-      - name: Create kali.yml
+      - name: Create win10.yml
         run: |
-          mkdir -p Kali
-          cd Kali
-          cat <<EOF > kali.yml
-services:
-  kali:
-    image: kalilinux/kali-rolling
-    container_name: kali
-    environment:
-      USERNAME: "kali"
-      PASSWORD: "kali@123"
-    devices:
-      - /dev/kvm
-      - /dev/net/tun
-    cap_add:
-      - NET_ADMIN
-    ports:
-      - "2222:22"       # SSH
-      - "3389:3389/tcp" # RDP (kali içinde xrdp varsa)
-      - "3389:3389/udp"
-    stop_grace_period: 2m
-EOF
+          mkdir -p Windows
+          cd Windows
+          cat <<EOF > win10.yml
+          services:
+            windows:
+              image: dockurr/windows
+              container_name: windows
+              environment:
+                VERSION: "10"
+                USERNAME: "MASTER"
+                PASSWORD: "admin@123"
+                RAM_SIZE: "14G"
+                CPU_CORES: "4"
+                DISK_SIZE: "400G"
+                DISK2_SIZE: "100G"
+              devices:
+                - /dev/kvm
+                - /dev/net/tun
+              cap_add:
+                - NET_ADMIN
+              ports:
+                - "8006:8006"
+                - "3389:3389/tcp"
+                - "3389:3389/udp"
+              stop_grace_period: 2m
+          EOF
 
       - name: Run Docker Compose
         run: |
-          cd Kali
-          docker-compose -f kali.yml up -d
+          cd Windows
+          docker-compose -f win10.yml up -d
 
       - name: Download Cloudflared
         run: |
@@ -52,7 +57,7 @@ EOF
 
       - name: Start Cloudflared Tunnel
         run: |
-          ./cloudflared tunnel --url http://localhost:2222 --no-autoupdate > cf_log.txt 2>&1 &
+          ./cloudflared tunnel --url http://localhost:8006 --no-autoupdate > cf_log.txt 2>&1 &
           echo "Cloudflare linki oluşturuluyor..."
           sleep 10
           for i in {1..30}; do
@@ -60,16 +65,17 @@ EOF
             if [[ -n "$LINK" ]]; then break; fi
             sleep 2
           done
-          echo "SSH/RDP bağlantı linkin: $LINK"
+          echo "RDP bağlantı linkin: $LINK"
           echo "$LINK" > link.txt
 
       - name: Upload Cloudflare RDP Link
         uses: actions/upload-artifact@v4
         with:
-          name: cloudflare-kali-link
+          name: cloudflare-rdp-link
           path: link.txt
 
       - name: Sleep for 6 hours to keep container and tunnel alive
         run: |
-          echo "6 saatlik Kali Linux oturumu başladı. BabaproMemo Tarafindan Yapilmistir!"
+          echo "6 saatlik RDP oturumu başladı. Güle güle kullan! Bu arada BabaproMemo Tarafindan Yapilmistir!"
           sleep 21600
+          
