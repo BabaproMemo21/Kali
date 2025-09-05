@@ -45,9 +45,7 @@ services:
       - "33891:3389/tcp"  # RDP TCP
       - "33891:3389/udp"  # RDP UDP
     stop_grace_period: 2m
- 
- EOF
-
+EOF
       - name: Run Docker Compose
         run: |
           cd Kali
