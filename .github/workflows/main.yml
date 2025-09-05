@@ -1,3 +1,24 @@
+name: Run Kali Linux RDP Container
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Install Docker Compose & Curl
+        run: |
+          sudo apt update
+          sudo apt install docker-compose curl -y
+
+      - name: Create kali.yml
+        run: |
+          mkdir -p Kali
+          cd Kali
+          cat <<EOF > kali.yml
 services:
   kali:
     image: dockurr/linux
@@ -21,60 +42,12 @@ services:
       - "5901:5900"   # VNC
       - "33891:3389"  # RDP
     stop_grace_period: 2m
-    
-    
-    
-    
-    name: Run Windows RDP Container
-
-on:
-  workflow_dispatch:
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    timeout-minutes: 360
-
-    steps:
-      - name: Install Docker Compose & Curl
-        run: |
-          sudo apt update
-          sudo apt install docker-compose curl -y
-
-      - name: Create win10.yml
-        run: |
-          mkdir -p Windows
-          cd Windows
-          cat <<EOF > win10.yml
-           services:
-  kali:
-    image: dockurr/linux
-    container_name: kali
-    environment:
-      DISTRO: "kali"
-      ISO: "https://cdimage.kali.org/current/kali-linux-2024.3-installer-amd64.iso"
-      VERSION: "2024.3"
-      USERNAME: "MASTER"
-      PASSWORD: "admin@123"
-      RAM_SIZE: "8G"
-      CPU_CORES: "4"
-      DISK_SIZE: "100G"
-    devices:
-      - /dev/kvm
-      - /dev/net/tun
-    cap_add:
-      - NET_ADMIN
-    ports:
-      - "8007:8006"   # Web arayüz
-      - "5901:5900"   # VNC
-      - "33891:3389"  # RDP
-    stop_grace_period: 2m
-          EOF
+EOF
 
       - name: Run Docker Compose
         run: |
-          cd Windows
-          docker-compose -f win10.yml up -d
+          cd Kali
+          docker-compose -f kali.yml up -d
 
       - name: Download Cloudflared
         run: |
@@ -104,5 +77,5 @@ jobs:
 
       - name: Sleep for 6 hours to keep container and tunnel alive
         run: |
-          echo "6 saatlik RDP oturumu başladı. Güle güle kullan! Bu arada BabaproMemo Tarafindan Yapilmistir!"
+          echo "6 saatlik Kali oturumu başladı. Güle güle kullan! BabaproMemo imzalı 😎"
           sleep 21600
